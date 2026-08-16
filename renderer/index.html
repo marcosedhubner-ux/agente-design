@@ -463,6 +463,18 @@
   #edit-canvas { position: relative; border: 1px solid var(--line); background:
     conic-gradient(#eee 90deg, #fff 90deg 180deg, #eee 180deg 270deg, #fff 270deg) top left / 16px 16px repeat; }
   #selection-canvas { cursor: crosshair; }
+  #selection-canvas.brush-active { cursor: none; }
+
+  .brush-cursor {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(30, 90, 220, 0.9);
+    background: rgba(30, 90, 220, 0.15);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    display: none;
+  }
+  .brush-cursor.subtract { border-color: rgba(220, 60, 60, 0.9); background: rgba(220, 60, 60, 0.15); }
 
   .tolerance-row { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: var(--ink-soft); }
   .tolerance-row input[type="range"] { flex: 1; }
@@ -800,11 +812,15 @@
     <div class="canvas-stack">
       <canvas id="edit-canvas"></canvas>
       <canvas id="selection-canvas"></canvas>
+      <div class="brush-cursor" id="brush-cursor"></div>
     </div>
+
+    <p class="hint">Segure <b>Alt</b> enquanto usa qualquer ferramenta pra tirar da seleção em vez de adicionar (igual Photoshop/Photopea).</p>
 
     <div class="tolerance-row" id="tolerance-row">
       <span>sensibilidade da varinha</span>
       <input type="range" id="tolerance-slider" min="5" max="100" value="32" />
+      <label class="checkbox-row" style="flex:none;"><input type="checkbox" id="wand-contiguous" checked /> contínuo</label>
     </div>
     <div class="tolerance-row" id="brush-size-row" style="display:none;">
       <span>tamanho do pincel</span>

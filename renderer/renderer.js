@@ -1204,13 +1204,17 @@ const selCtx = selectionCanvas.getContext('2d', { willReadFrequently: true });
 const toleranceRow = document.getElementById('tolerance-row');
 const brushSizeRow = document.getElementById('brush-size-row');
 const brushSizeSlider = document.getElementById('brush-size-slider');
+const wandContiguousCheckbox = document.getElementById('wand-contiguous');
+const brushCursor = document.getElementById('brush-cursor');
 const SELECTION_FILL = 'rgba(60, 130, 255, 0.5)';
 const SELECTION_ALPHA_THRESHOLD = 10;
 
 let activeTool = 'wand';
 let lassoPoints = [];
+let lassoSubtract = false;
 let committedSelectionData = null;
 let brushing = false;
+let brushSubtract = false;
 
 const toolButtons = {
   wand: document.getElementById('tool-wand'),
@@ -1223,6 +1227,8 @@ function setActiveTool(tool) {
   Object.entries(toolButtons).forEach(([name, btn]) => btn.classList.toggle('active', name === tool));
   toleranceRow.style.display = tool === 'wand' ? 'flex' : 'none';
   brushSizeRow.style.display = tool === 'brush' ? 'flex' : 'none';
+  selectionCanvas.classList.toggle('brush-active', tool === 'brush');
+  brushCursor.style.display = 'none';
   lassoPoints = [];
   redrawSelectionWithLassoPreview();
 }
@@ -1279,30 +1285,47 @@ function commitSelection() {
   committedSelectionData = selCtx.getImageData(0, 0, selectionCanvas.width, selectionCanvas.height);
 }
 
-function wandSelect(startX, startY, tolerance) {
+function wandSelect(startX, startY, tolerance, subtract, contiguous) {
   const w = editCanvas.width, h = editCanvas.height;
   const base = editCtx.getImageData(0, 0, w, h).data;
   const startIdx = (startY * w + startX) * 4;
   if (base[startIdx + 3] === 0) return;
   const r0 = base[startIdx], g0 = base[startIdx + 1], b0 = base[startIdx + 2];
   const tol2 = tolerance * tolerance * 3;
-  const visited = new Uint8Array(w * h);
-  const stack = [[startX, startY]];
   const sel = selCtx.getImageData(0, 0, w, h);
   const sd = sel.data;
 
-  while (stack.length) {
-    const [x, y] = stack.pop();
-    if (x < 0 || x >= w || y < 0 || y >= h) continue;
-    const vIdx = y * w + x;
-    if (visited[vIdx]) continue;
-    visited[vIdx] = 1;
-    const i = vIdx * 4;
-    if (base[i + 3] === 0) continue;
-    const dr = base[i] - r0, dg = base[i + 1] - g0, db = base[i + 2] - b0;
-    if (dr * dr + dg * dg + db * db > tol2) continue;
-    sd[i] = 60; sd[i + 1] = 130; sd[i + 2] = 255; sd[i + 3] = 130;
-    stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+  const applyPixel = (i) => {
+    if (subtract) {
+      sd[i + 3] = 0;
+    } else {
+      sd[i] = 60; sd[i + 1] = 130; sd[i + 2] = 255; sd[i + 3] = 130;
+    }
+  };
+
+  if (contiguous) {
+    const visited = new Uint8Array(w * h);
+    const stack = [[startX, startY]];
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= w || y < 0 || y >= h) continue;
+      const vIdx = y * w + x;
+      if (visited[vIdx]) continue;
+      visited[vIdx] = 1;
+      const i = vIdx * 4;
+      if (base[i + 3] === 0) continue;
+      const dr = base[i] - r0, dg = base[i + 1] - g0, db = base[i + 2] - b0;
+      if (dr * dr + dg * dg + db * db > tol2) continue;
+      applyPixel(i);
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+  } else {
+    for (let i = 0; i < base.length; i += 4) {
+      if (base[i + 3] === 0) continue;
+      const dr = base[i] - r0, dg = base[i + 1] - g0, db = base[i + 2] - b0;
+      if (dr * dr + dg * dg + db * db > tol2) continue;
+      applyPixel(i);
+    }
   }
   selCtx.putImageData(sel, 0, 0);
 }
@@ -1310,8 +1333,9 @@ function wandSelect(startX, startY, tolerance) {
 function redrawSelectionWithLassoPreview() {
   if (committedSelectionData) selCtx.putImageData(committedSelectionData, 0, 0);
   if (lassoPoints.length === 0) return;
-  selCtx.strokeStyle = 'rgba(30, 90, 220, 0.9)';
-  selCtx.fillStyle = 'rgba(30, 90, 220, 0.9)';
+  const previewColor = lassoSubtract ? 'rgba(220, 60, 60, 0.9)' : 'rgba(30, 90, 220, 0.9)';
+  selCtx.strokeStyle = previewColor;
+  selCtx.fillStyle = previewColor;
   selCtx.lineWidth = Math.max(1, editCanvas.width / 400);
   selCtx.beginPath();
   selCtx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
@@ -1333,22 +1357,26 @@ function closeLasso() {
   }
   pushUndoSnapshot();
   if (committedSelectionData) selCtx.putImageData(committedSelectionData, 0, 0);
-  selCtx.fillStyle = SELECTION_FILL;
+  selCtx.globalCompositeOperation = lassoSubtract ? 'destination-out' : 'source-over';
+  selCtx.fillStyle = lassoSubtract ? 'rgba(0, 0, 0, 1)' : SELECTION_FILL;
   selCtx.beginPath();
   selCtx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
   for (let i = 1; i < lassoPoints.length; i++) selCtx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
   selCtx.closePath();
   selCtx.fill();
+  selCtx.globalCompositeOperation = 'source-over';
   lassoPoints = [];
   commitSelection();
 }
 
-function paintBrush(e) {
+function paintBrush(e, subtract) {
   const { x, y } = canvasPointFromEvent(e);
-  selCtx.fillStyle = SELECTION_FILL;
+  selCtx.globalCompositeOperation = subtract ? 'destination-out' : 'source-over';
+  selCtx.fillStyle = subtract ? 'rgba(0, 0, 0, 1)' : SELECTION_FILL;
   selCtx.beginPath();
   selCtx.arc(x, y, Number(brushSizeSlider.value), 0, Math.PI * 2);
   selCtx.fill();
+  selCtx.globalCompositeOperation = 'source-over';
 }
 
 selectionCanvas.addEventListener('click', (e) => {
@@ -1358,9 +1386,10 @@ selectionCanvas.addEventListener('click', (e) => {
 
   if (activeTool === 'wand') {
     pushUndoSnapshot();
-    wandSelect(x, y, Number(toleranceSlider.value));
+    wandSelect(x, y, Number(toleranceSlider.value), e.altKey, wandContiguousCheckbox.checked);
     commitSelection();
   } else if (activeTool === 'lasso') {
+    if (lassoPoints.length === 0) lassoSubtract = e.altKey;
     lassoPoints.push({ x, y });
     redrawSelectionWithLassoPreview();
   }
@@ -1370,21 +1399,49 @@ selectionCanvas.addEventListener('dblclick', () => {
   if (activeTool === 'lasso') closeLasso();
 });
 
+function updateBrushCursor(e) {
+  if (activeTool !== 'brush') {
+    brushCursor.style.display = 'none';
+    return;
+  }
+  const rect = selectionCanvas.getBoundingClientRect();
+  const stackRect = selectionCanvas.parentElement.getBoundingClientRect();
+  const scale = rect.width / selectionCanvas.width;
+  const size = Number(brushSizeSlider.value) * 2 * scale;
+  brushCursor.style.width = size + 'px';
+  brushCursor.style.height = size + 'px';
+  brushCursor.style.left = (e.clientX - stackRect.left) + 'px';
+  brushCursor.style.top = (e.clientY - stackRect.top) + 'px';
+  brushCursor.classList.toggle('subtract', e.altKey);
+  brushCursor.style.display = 'block';
+}
+
 selectionCanvas.addEventListener('pointerdown', (e) => {
   if (activeTool !== 'brush') return;
   brushing = true;
+  brushSubtract = e.altKey;
   pushUndoSnapshot();
   selectionCanvas.setPointerCapture(e.pointerId);
-  paintBrush(e);
+  paintBrush(e, brushSubtract);
 });
 selectionCanvas.addEventListener('pointermove', (e) => {
+  updateBrushCursor(e);
   if (!brushing) return;
-  paintBrush(e);
+  paintBrush(e, brushSubtract);
 });
 selectionCanvas.addEventListener('pointerup', () => {
   if (!brushing) return;
   brushing = false;
   commitSelection();
+});
+selectionCanvas.addEventListener('pointerleave', () => {
+  brushCursor.style.display = 'none';
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Alt' && imageEditorOverlay.classList.contains('show')) brushCursor.classList.add('subtract');
+});
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'Alt') brushCursor.classList.remove('subtract');
 });
 
 document.getElementById('tool-invert').addEventListener('click', () => {
