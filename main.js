@@ -126,6 +126,20 @@ let mainWindow = null;
 let widgetWindow = null;
 let tray = null;
 let isQuitting = false;
+let preEditorBounds = null;
+
+function enterEditorFullscreen() {
+  if (!mainWindow || mainWindow.isDestroyed() || preEditorBounds) return;
+  preEditorBounds = mainWindow.getBounds();
+  const display = screen.getDisplayMatching(preEditorBounds);
+  mainWindow.setBounds(display.workArea);
+}
+
+function exitEditorFullscreen() {
+  if (!mainWindow || mainWindow.isDestroyed() || !preEditorBounds) return;
+  mainWindow.setBounds(preEditorBounds);
+  preEditorBounds = null;
+}
 
 function makeTitle(text) {
   const clean = (text || '').trim().replace(/\s+/g, ' ');
@@ -159,6 +173,7 @@ function createMainWindow() {
   mainWindow.on('close', (e) => {
     if (!isQuitting) {
       e.preventDefault();
+      exitEditorFullscreen();
       mainWindow.hide();
     }
   });
@@ -760,6 +775,9 @@ ipcMain.on('widget:close', () => {
   }
   widgetWindow = null;
 });
+
+ipcMain.on('editor:enterFullscreen', () => enterEditorFullscreen());
+ipcMain.on('editor:exitFullscreen', () => exitEditorFullscreen());
 
 ipcMain.on('eyedropper:open', () => openEyedropper());
 

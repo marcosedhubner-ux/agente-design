@@ -1249,9 +1249,17 @@ function openImageEditor(dataUrl) {
     undoStack = [];
     lassoPoints = [];
     setActiveTool('wand');
+    shellEl.classList.add('editor-maximized');
+    window.atelie.enterEditorFullscreen();
     imageEditorOverlay.classList.add('show');
   };
   img.src = dataUrl;
+}
+
+function closeImageEditor() {
+  imageEditorOverlay.classList.remove('show');
+  shellEl.classList.remove('editor-maximized');
+  window.atelie.exitEditorFullscreen();
 }
 
 function pushUndoSnapshot() {
@@ -1499,12 +1507,12 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('editor-cancel').addEventListener('click', () => {
-  imageEditorOverlay.classList.remove('show');
+  closeImageEditor();
 });
 
 document.getElementById('editor-apply').addEventListener('click', async () => {
   const dataUrl = editCanvas.toDataURL('image/png');
-  imageEditorOverlay.classList.remove('show');
+  closeImageEditor();
   const tab = editingTab || activeTab();
   if (!tab) return;
   attachmentChip.classList.add('show');

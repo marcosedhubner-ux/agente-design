@@ -30,6 +30,9 @@ contextBridge.exposeInMainWorld('atelie', {
   onFlyoutClose: (cb) => ipcRenderer.on('flyout:close', () => cb()),
   notifyFlyoutCloseDone: () => ipcRenderer.send('flyout:closeDone'),
 
+  enterEditorFullscreen: () => ipcRenderer.send('editor:enterFullscreen'),
+  exitEditorFullscreen: () => ipcRenderer.send('editor:exitFullscreen'),
+
   openEyedropper: () => ipcRenderer.send('eyedropper:open'),
   onEyedropperResult: (cb) => ipcRenderer.on('eyedropper:result', (_e, hex) => cb(hex)),
   onEyedropperError: (cb) => ipcRenderer.on('eyedropper:error', (_e, message) => cb(message)),
