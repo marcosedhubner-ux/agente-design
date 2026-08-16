@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    cursor: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  #hint {
+    position: fixed;
+    left: 50%;
+    top: 18px;
+    transform: translateX(-50%);
+    background: rgba(20, 30, 50, 0.78);
+    color: #fff;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    pointer-events: none;
+  }
+  #loupe {
+    position: fixed;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+    overflow: hidden;
+    pointer-events: none;
+    display: none;
+    image-rendering: pixelated;
+  }
+  #loupe canvas { position: absolute; top: 0; left: 0; }
+  #loupe .crosshair {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 9px; height: 9px;
+    margin: -4.5px 0 0 -4.5px;
+    border: 1.5px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6);
+    box-sizing: border-box;
+  }
+  #loupe-hex {
+    position: fixed;
+    background: rgba(20, 30, 50, 0.85);
+    color: #fff;
+    font-family: "Consolas", monospace;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+  <img id="frame" alt="" />
+  <canvas id="canvas" style="display:none"></canvas>
+  <div id="hint">Clique em qualquer ponto da tela pra pegar a cor — Esc pra cancelar</div>
+
+  <div id="loupe"><canvas id="loupe-canvas" width="110" height="110"></canvas><div class="crosshair"></div></div>
+  <div id="loupe-hex"></div>
+
+<script>
+  const frameEl = document.getElementById('frame');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const loupe = document.getElementById('loupe');
+  const loupeCanvas = document.getElementById('loupe-canvas');
+  const loupeCtx = loupeCanvas.getContext('2d');
+  const loupeHex = document.getElementById('loupe-hex');
+  let ready = false;
+
+  window.eyedropperApi.onImage((dataUrl, w, h) => {
+    canvas.width = w;
+    canvas.height = h;
+    frameEl.src = dataUrl;
+  });
+
+  frameEl.addEventListener('load', () => {
+    ctx.drawImage(frameEl, 0, 0, canvas.width, canvas.height);
+    ready = true;
+  });
+
+  function toCanvasPoint(clientX, clientY) {
+    const scaleX = canvas.width / window.innerWidth;
+    const scaleY = canvas.height / window.innerHeight;
+    return {
+      x: Math.min(canvas.width - 1, Math.max(0, Math.floor(clientX * scaleX))),
+      y: Math.min(canvas.height - 1, Math.max(0, Math.floor(clientY * scaleY))),
+    };
+  }
+
+  function hexAt(x, y) {
+    const d = ctx.getImageData(x, y, 1, 1).data;
+    return '#' + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+
+  const ZOOM = 8;
+  document.addEventListener('mousemove', (e) => {
+    if (!ready) return;
+    const { x, y } = toCanvasPoint(e.clientX, e.clientY);
+    const hex = hexAt(x, y);
+
+    loupeCtx.imageSmoothingEnabled = false;
+    loupeCtx.clearRect(0, 0, 110, 110);
+    const half = 110 / ZOOM / 2;
+    loupeCtx.drawImage(canvas, x - half, y - half, half * 2, half * 2, 0, 0, 110, 110);
+
+    loupe.style.left = (e.clientX - 55) + 'px';
+    loupe.style.top = (e.clientY - 140) + 'px';
+    loupe.style.display = 'block';
+
+    loupeHex.textContent = hex;
+    loupeHex.style.left = (e.clientX - 30) + 'px';
+    loupeHex.style.top = (e.clientY - 160) + 'px';
+    loupeHex.style.display = 'block';
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!ready) return;
+    const { x, y } = toCanvasPoint(e.clientX, e.clientY);
+    window.eyedropperApi.pick(hexAt(x, y));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') window.eyedropperApi.cancel();
+  });
+</script>
+</body>
+</html>

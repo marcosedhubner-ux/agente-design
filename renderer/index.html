@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Ateliê Azul</title>
+<style>
+  :root {
+    --sky-100: #EAF3FC;
+    --sky-50: #F6FAFE;
+    --card: #FFFFFF;
+    --ink: #1E2A44;
+    --ink-soft: #5B6B85;
+    --accent: #2F6FED;
+    --accent-deep: #1B4FC4;
+    --accent-ink: #FFFFFF;
+    --whisker: #F3A472;
+    --blush: #FBD7C4;
+    --line: #D8E6F7;
+    --shadow: rgba(30, 63, 130, 0.16);
+    --good: #2E9E6B;
+    --bad: #C0392B;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  html, body { background: transparent; }
+
+  body {
+    margin: 0;
+    padding: 16px;
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .shell {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 30px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 38%),
+      var(--sky-100);
+    box-shadow: 0 28px 70px -16px rgba(20, 40, 90, 0.4), 0 6px 20px -6px rgba(20, 40, 90, 0.22);
+    transform-origin: 50% 100%;
+    transition: transform 240ms cubic-bezier(0.32, 1.2, 0.4, 1), opacity 180ms ease;
+  }
+  .shell.flyout-collapsed { transform: scale(0.08); opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .shell { transition: opacity 120ms ease; }
+    .shell.flyout-collapsed { transform: none; }
+  }
+
+  header {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    -webkit-app-region: drag;
+  }
+
+  header .cat-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--sky-50);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    flex: none;
+  }
+
+  header h1 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  header .sub {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  header .spacer { flex: 1; }
+
+  .icon-btn {
+    -webkit-app-region: no-drag;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--sky-50);
+    color: var(--ink-soft);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+  }
+  .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  .screen { display: none; flex-direction: column; flex: 1; min-height: 0; }
+  .screen.active { display: flex; }
+
+  .tab-bar {
+    flex: none;
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    padding: 8px 8px 0;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 160px;
+    padding: 7px 8px 7px 12px;
+    border-radius: 12px 12px 0 0;
+    background: var(--sky-100);
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+  }
+  .tab.active { background: var(--sky-50); color: var(--ink); border-color: var(--line); }
+  .tab:hover:not(.active) { background: var(--sky-50); }
+  .tab .tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tab .tab-close {
+    flex: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+  }
+  .tab .tab-close:hover { background: var(--line); color: var(--bad); }
+  .tab-add {
+    flex: none;
+    align-self: center;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--sky-50);
+    color: var(--ink-soft);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 4px 6px;
+  }
+  .tab-add:hover { color: var(--accent); border-color: var(--accent); }
+
+  #home-screen { padding: 18px; gap: 14px; overflow-y: auto; }
+
+  .home-title {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: 1.1rem;
+    margin: 4px 0 0;
+  }
+
+  .new-chat-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    border-radius: 20px;
+    padding: 14px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .new-chat-card:hover { background: var(--accent-deep); }
+
+  .session-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .session-card {
+    text-align: left;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .session-card:hover { border-color: var(--accent); }
+  .session-card .title { font-size: 0.92rem; color: var(--ink); }
+  .session-card .date { font-size: 0.76rem; color: var(--ink-soft); }
+
+  .home-empty { color: var(--ink-soft); font-size: 0.9rem; text-align: center; margin-top: 20px; }
+
+  main { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+  .tab-messages {
+    display: none;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 18px;
+  }
+  .tab-messages.active { display: flex; }
+
+  .empty-state {
+    margin: auto 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .empty-state .cat { width: 96px; height: auto; color: var(--accent); }
+
+  .empty-state h2 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: 1.2rem;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .empty-state p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; max-width: 32ch; }
+
+  .suggestions { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 340px; margin-top: 6px; }
+
+  .suggestion {
+    text-align: left;
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 0.86rem;
+    padding: 10px 14px;
+    border-radius: 16px;
+    cursor: pointer;
+  }
+  .suggestion:hover { border-color: var(--accent); color: var(--accent-deep); }
+
+  .row { display: flex; gap: 8px; align-items: flex-end; }
+  .row.user { justify-content: flex-end; }
+  .row.assistant { justify-content: flex-start; }
+
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--sky-50); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; flex: none;
+  }
+
+  .bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .row.user .bubble { background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 6px; }
+  .row.assistant .bubble { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 6px; }
+  .row.assistant .bubble.error { border-color: #E3B9B9; color: #7A2E2E; background: #FCEFEF; }
+
+  kbd.keycap {
+    display: inline-block;
+    min-width: 1.4em;
+    padding: 1px 7px;
+    margin: 0 1px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    border-bottom: 2px solid var(--line);
+    background: var(--sky-50);
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, sans-serif;
+    font-size: 0.85em;
+    font-weight: 600;
+    font-style: normal;
+    text-align: center;
+    line-height: 1.5;
+    vertical-align: -1px;
+  }
+
+  .thumb { max-width: 220px; max-height: 160px; border-radius: 14px; display: block; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.4); cursor: pointer; }
+
+  .typing { display: inline-flex; gap: 4px; align-items: center; padding: 2px 0; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-soft); animation: bounce 1.2s infinite ease-in-out; }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.5; } 40% { transform: translateY(-4px); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .typing span { animation: none; opacity: 0.7; } }
+
+  footer { flex: none; padding: 12px 14px; background: var(--card); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+
+  .attachment-chip {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: var(--sky-50);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 8px 10px;
+    width: fit-content;
+    max-width: 100%;
+  }
+  .attachment-chip.show { display: flex; }
+  .attachment-chip img { width: 46px; height: 46px; object-fit: cover; border-radius: 10px; flex: none; }
+  .attachment-chip .chip-tools { display: flex; flex-direction: column; gap: 4px; }
+  .attachment-chip .chip-status { font-size: 0.74rem; color: var(--ink-soft); }
+  .chip-btn-row { display: flex; gap: 4px; }
+  .chip-btn {
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    padding: 3px 7px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .chip-btn:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .chip-btn:disabled { opacity: 0.5; cursor: default; }
+  .attachment-remove {
+    border: none; background: none; color: var(--ink-soft); cursor: pointer;
+    font-size: 1rem; line-height: 1; align-self: flex-start; padding: 2px;
+  }
+  .attachment-remove:hover { color: var(--bad); }
+
+  .input-row { display: flex; align-items: flex-end; gap: 8px; }
+
+  #attach-btn, #capture-btn, #eyedropper-btn { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--sky-50); color: var(--accent); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+  #attach-btn:hover, #capture-btn:hover, #eyedropper-btn:hover { border-color: var(--accent); }
+  #attach-btn:disabled, #capture-btn:disabled, #eyedropper-btn:disabled { opacity: 0.5; cursor: default; }
+
+  #text-input { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 20px; padding: 10px 14px; font-family: inherit; font-size: 0.92rem; color: var(--ink); max-height: 120px; background: var(--sky-50); }
+  #text-input:focus { outline: none; border-color: var(--accent); }
+
+  #send-btn { flex: none; width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--accent); color: var(--accent-ink); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #send-btn:disabled { opacity: 0.5; cursor: default; }
+  #send-btn:not(:disabled):hover { background: var(--accent-deep); }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+
+  .overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--sky-100) 88%, transparent);
+    backdrop-filter: blur(2px);
+    z-index: 30;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .overlay.show { display: flex; }
+
+  .capture-overlay { flex-direction: column; gap: 10px; text-align: center; }
+  .capture-overlay .count { font-family: Georgia, serif; font-size: 4.5rem; font-weight: 600; color: var(--accent); line-height: 1; }
+  .capture-overlay p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; max-width: 30ch; }
+  .capture-overlay .cancel-capture { margin-top: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); font-size: 0.8rem; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+  .capture-overlay .cancel-capture:hover { color: var(--accent-deep); border-color: var(--accent); }
+
+  .modal-card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 22px;
+    width: min(400px, 100%);
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px -20px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .modal-card h2 { font-family: Georgia, serif; font-size: 1.1rem; margin: 0; }
+  .modal-card .field { display: flex; flex-direction: column; gap: 6px; }
+  .modal-card label { font-size: 0.82rem; color: var(--ink-soft); }
+  .modal-card select, .modal-card textarea, .modal-card input[type="text"] {
+    border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px;
+    font-family: inherit; font-size: 0.88rem; color: var(--ink); background: var(--sky-50);
+  }
+  .modal-card textarea { resize: vertical; min-height: 44px; }
+
+  .hotkey-row { display: flex; align-items: center; gap: 8px; }
+  .hotkey-badge { border: 1px solid var(--line); background: var(--sky-50); border-radius: 12px; padding: 8px 12px; font-size: 0.85rem; flex: 1; text-align: center; }
+  .hotkey-badge.listening { border-color: var(--accent); color: var(--accent-deep); }
+
+  .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--ink); }
+
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+  .btn-secondary { border: 1px solid var(--line); background: var(--sky-50); color: var(--ink-soft); font-size: 0.85rem; padding: 8px 16px; border-radius: 999px; cursor: pointer; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .btn-primary { border: none; background: var(--accent); color: var(--accent-ink); font-size: 0.85rem; padding: 8px 18px; border-radius: 999px; cursor: pointer; font-weight: 600; }
+  .btn-primary:hover { background: var(--accent-deep); }
+  .btn-primary:disabled { opacity: 0.6; cursor: default; }
+
+  .hint { font-size: 0.76rem; color: var(--ink-soft); margin: 0; }
+  .hint.warn { color: var(--bad); }
+
+  .editor-card { width: min(520px, 100%); }
+  .editor-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .tool-btn {
+    width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--sky-50); cursor: pointer; font-size: 1.05rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tool-btn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--sky-50)); }
+  .tool-sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 2px; }
+
+  .canvas-stack { position: relative; width: 100%; }
+  #edit-canvas, #selection-canvas {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border-radius: 14px;
+  }
+  #edit-canvas { position: relative; border: 1px solid var(--line); background:
+    conic-gradient(#eee 90deg, #fff 90deg 180deg, #eee 180deg 270deg, #fff 270deg) top left / 16px 16px repeat; }
+  #selection-canvas { cursor: crosshair; }
+
+  .tolerance-row { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: var(--ink-soft); }
+  .tolerance-row input[type="range"] { flex: 1; }
+
+  .lightbox-content { display: flex; flex-direction: column; gap: 12px; align-items: center; max-width: 100%; }
+  #lightbox-img { max-width: 100%; max-height: 55vh; border-radius: 14px; object-fit: contain; box-shadow: 0 12px 30px -10px var(--shadow); }
+  .lightbox-actions { display: flex; gap: 8px; }
+
+  .theme-picker { display: flex; flex-direction: column; gap: 10px; }
+
+  .sv-square {
+    position: relative;
+    width: 100%;
+    height: 130px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    cursor: crosshair;
+    background:
+      linear-gradient(to top, #000, transparent),
+      linear-gradient(to right, #fff, hsl(var(--picker-hue, 221), 100%, 50%));
+    touch-action: none;
+  }
+  .sv-thumb {
+    position: absolute;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.3);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .hue-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+    cursor: pointer;
+  }
+  .hue-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--ink-soft);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+
+  .theme-picker-row { display: flex; align-items: center; gap: 10px; }
+  .theme-swatch { flex: none; width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line); }
+  .hex-input { flex: 1; text-transform: uppercase; font-family: "Consolas", monospace; letter-spacing: 0.03em; }
+
+  .color-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 10px 12px;
+    max-width: 78%;
+  }
+  .color-card .swatch { flex: none; width: 34px; height: 34px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); }
+  .color-card .info { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+  .color-card .hex { font-family: "Consolas", monospace; font-size: 0.9rem; color: var(--ink); }
+  .color-card .label { font-size: 0.72rem; color: var(--ink-soft); }
+  .color-card .wheel-btn {
+    flex: none; width: 34px; height: 34px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--sky-50); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
+  }
+  .color-card .wheel-btn:hover { border-color: var(--accent); }
+
+  .colorwheel-wrap { display: flex; align-items: center; justify-content: center; gap: 18px; }
+  .colorwheel {
+    position: relative;
+    width: 168px; height: 168px;
+    border-radius: 50%;
+    background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+    box-shadow: 0 0 0 1px var(--line);
+  }
+  .colorwheel::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, transparent 72%);
+  }
+  .colorwheel-dot {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 2px 5px rgba(0,0,0,0.3);
+    transform: translate(-50%, -50%);
+  }
+  .colorwheel-swatch { flex: none; width: 56px; height: 56px; border-radius: 16px; border: 1px solid var(--line); }
+
+  .hex-display { text-align: center; font-family: "Consolas", monospace; font-size: 0.95rem; color: var(--ink); }
+
+  .colorwheel-swatch { display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 1.3rem; font-weight: 600; }
+
+  .harmony-group label { font-size: 0.8rem; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+  .harmony-row { display: flex; gap: 8px; }
+  .harmony-swatch {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer;
+    background: none; border: none; padding: 0;
+  }
+  .harmony-swatch .chip {
+    width: 100%; height: 44px; border-radius: 10px; border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif; font-size: 1.1rem; font-weight: 600;
+  }
+  .harmony-swatch .chip-hex { font-size: 0.68rem; font-family: "Consolas", monospace; color: var(--ink-soft); }
+
+  .usage-carousel { display: flex; align-items: stretch; gap: 8px; }
+  .usage-arrow {
+    flex: none; width: 34px; border: 1px solid var(--line); background: var(--sky-50);
+    color: var(--ink-soft); border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .usage-arrow:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .usage-page { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .usage-preview { display: flex; flex-direction: column; gap: 14px; }
+
+  .usage-mock-frame { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .usage-mock { padding: 16px; display: flex; flex-direction: column; gap: 6px; min-height: 92px; justify-content: center; }
+  .usage-mock-light { background: var(--sky-50); }
+  .usage-mock-heading { font-family: Georgia, serif; font-size: 1.05rem; font-weight: 600; }
+  .usage-mock-text { font-size: 0.82rem; opacity: 0.92; }
+  .usage-mock-btn {
+    align-self: flex-start; border: none; border-radius: 999px; padding: 8px 18px;
+    font-size: 0.85rem; font-weight: 600; cursor: default; font-family: inherit;
+  }
+  .usage-mock-split { flex-direction: row; padding: 0; min-height: 92px; }
+  .usage-mock-split > div {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif; font-size: 1.2rem; font-weight: 600;
+  }
+  .usage-mock-strip { flex-direction: row; padding: 0; min-height: 72px; }
+  .usage-mock-strip > div { flex: 1; }
+  .usage-mock-row { display: flex; align-items: center; gap: 8px; }
+  .usage-mock-tag { font-size: 0.72rem; padding: 3px 10px; border-radius: 999px; font-weight: 600; }
+  .usage-mock-rule { flex: 1; height: 3px; border-radius: 999px; }
+
+  .usage-dots { display: flex; justify-content: center; gap: 6px; }
+  .usage-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+  .usage-dot.active { background: var(--accent); }
+</style>
+</head>
+<body>
+<div class="shell flyout-collapsed" id="shell">
+
+<header>
+  <div class="cat-badge">
+    <svg width="20" height="18" viewBox="0 0 120 96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M30 30 L20 10 L42 24" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M90 30 L100 10 L78 24" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+      <ellipse cx="60" cy="52" rx="34" ry="28" stroke="currentColor" stroke-width="5"/>
+      <circle cx="49" cy="48" r="3.4" fill="currentColor"/>
+      <circle cx="71" cy="48" r="3.4" fill="currentColor"/>
+      <path d="M60 61 Q60 66 54 66" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Ateliê Azul</h1>
+    <p class="sub">seu mentor de design</p>
+  </div>
+  <div class="spacer"></div>
+  <button class="icon-btn" id="home-btn" title="Suas conversas">🏠</button>
+  <button class="icon-btn" id="settings-btn" title="Configurações">⚙️</button>
+</header>
+
+<div class="tab-bar" id="tab-bar"></div>
+
+<div class="screen" id="home-screen">
+  <h2 class="home-title">Suas conversas</h2>
+  <button class="new-chat-card" id="home-new-chat">➕ Nova conversa</button>
+  <div class="session-list" id="session-list"></div>
+  <p class="home-empty" id="home-empty" style="display:none;">Ainda não tem nenhuma conversa. Clique em "Nova conversa" pra começar!</p>
+</div>
+
+<div class="screen active" id="chat-screen">
+  <main id="messages-viewport"></main>
+
+  <template id="empty-state-template">
+    <div class="empty-state">
+      <svg class="cat" viewBox="0 0 120 96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M30 30 L20 10 L42 24" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M90 30 L100 10 L78 24" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+        <ellipse cx="60" cy="52" rx="34" ry="28" stroke="currentColor" stroke-width="3.2"/>
+        <circle cx="47" cy="50" r="9" fill="var(--blush)" opacity="0.7"/>
+        <circle cx="73" cy="50" r="9" fill="var(--blush)" opacity="0.7"/>
+        <circle cx="49" cy="48" r="2.6" fill="currentColor"/>
+        <circle cx="71" cy="48" r="2.6" fill="currentColor"/>
+        <path d="M60 56 L56 61 L64 61 Z" fill="var(--whisker)"/>
+        <path d="M60 61 Q60 66 54 66" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M28 55 H10 M28 60 H8 M28 65 H11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.6"/>
+        <path d="M92 55 H110 M92 60 H112 M92 65 H109" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.6"/>
+        <path d="M96 70 Q116 66 110 46" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>
+      </svg>
+      <h2>Oi! Sobre o que vamos conversar?</h2>
+      <p>Pode pedir ideias, mandar um print pra eu opinar, ou só tirar uma dúvida.</p>
+      <div class="suggestions">
+        <button class="suggestion" data-text="Me dê ideias para um projeto novo">💡 Me dê ideias para um projeto novo</button>
+        <button class="suggestion" data-text="O que é hierarquia visual?">❓ O que é hierarquia visual?</button>
+        <button class="suggestion" data-text="Essas cores combinam entre si?">🎨 Essas cores combinam entre si?</button>
+      </div>
+    </div>
+  </template>
+
+  <footer>
+    <div class="attachment-chip" id="attachment-chip">
+      <img id="attachment-thumb" class="thumb" alt="" />
+      <div class="chip-tools">
+        <span class="chip-status" id="attachment-status">imagem anexada</span>
+        <div class="chip-btn-row">
+          <button class="chip-btn" id="tool-remove-bg" title="Remover fundo automaticamente">🪄 fundo</button>
+          <button class="chip-btn" id="tool-remove-bg-manual" title="Remover fundo manualmente">🖌️ manual</button>
+          <button class="chip-btn" id="tool-enhance" title="Melhorar qualidade">✨ melhorar</button>
+        </div>
+      </div>
+      <button class="attachment-remove" id="attachment-remove" title="Remover imagem">✕</button>
+    </div>
+    <div class="input-row">
+      <button id="attach-btn" title="Anexar imagem do computador">📎</button>
+      <button id="capture-btn" title="Tirar print da tela">📷</button>
+      <button id="eyedropper-btn" title="Conta-gotas: descobrir a cor de qualquer ponto da tela">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M20.71 5.63l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-3.12 3.12-1.93-1.91-1.41 1.41 1.42 1.42L3 16.25V21h4.75l8.92-8.92 1.42 1.42 1.41-1.41-1.92-1.92 3.12-3.12c.4-.4.4-1.03.01-1.42zM6.92 19H5v-1.92l9.06-9.06 1.92 1.92L6.92 19z"/></svg>
+      </button>
+      <textarea id="text-input" rows="1" placeholder="Escreva sua mensagem..."></textarea>
+      <button id="send-btn" title="Enviar">➤</button>
+    </div>
+  </footer>
+</div>
+
+<div class="overlay capture-overlay" id="capture-overlay">
+  <div class="count" id="capture-count">3</div>
+  <p>Troque para a tela ou programa que você quer mostrar. A gente tira o print sozinho.</p>
+  <button class="cancel-capture" id="cancel-capture">cancelar</button>
+</div>
+
+<div class="overlay" id="settings-overlay">
+  <div class="modal-card">
+    <h2>Configurações</h2>
+
+    <div class="field">
+      <label>Atalho pra tirar print da tela (funciona em qualquer programa)</label>
+      <div class="hotkey-row">
+        <div class="hotkey-badge" id="hotkey-badge">Ctrl+Shift+D</div>
+        <button class="btn-secondary" id="hotkey-record">gravar</button>
+      </div>
+      <p class="hint" id="hotkey-hint">Ao usar o atalho, o print é tirado na hora, sem contagem regressiva.</p>
+    </div>
+
+    <div class="field">
+      <label>Atalho pro conta-gotas (funciona em qualquer programa, aponta e clica em qualquer ponto da tela)</label>
+      <div class="hotkey-row">
+        <div class="hotkey-badge" id="eyedropper-hotkey-badge">Ctrl+Shift+E</div>
+        <button class="btn-secondary" id="eyedropper-hotkey-record">gravar</button>
+      </div>
+      <p class="hint" id="eyedropper-hotkey-hint">Ao usar o atalho, o conta-gotas abre na hora, em qualquer lugar da tela.</p>
+    </div>
+
+    <div class="field">
+      <label>Qualidade das respostas</label>
+      <select id="model-select">
+        <option value="">Padrão (mais qualidade)</option>
+        <option value="claude-haiku-4-5-20251001">Econômico (mais rápido, gasta menos)</option>
+      </select>
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" id="widget-checkbox" checked />
+      <label for="widget-checkbox">Mostrar botãozinho flutuante na tela</label>
+    </div>
+
+    <div class="field">
+      <label>Cor do tema</label>
+      <div class="theme-picker">
+        <div class="sv-square" id="sv-square"><div class="sv-thumb" id="sv-thumb"></div></div>
+        <input type="range" id="hue-slider" class="hue-slider" min="0" max="359" value="221" />
+        <div class="theme-picker-row">
+          <div class="theme-swatch" id="theme-swatch"></div>
+          <input type="text" id="theme-hex" class="hex-input" maxlength="7" placeholder="#2F6FED" />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-primary" id="settings-close">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="questions-overlay">
+  <div class="modal-card">
+    <h2>Responder</h2>
+    <div id="questions-fields"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="questions-cancel">cancelar</button>
+      <button class="btn-primary" id="questions-send">Enviar respostas</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="image-editor-overlay">
+  <div class="modal-card editor-card">
+    <h2>Remover fundo manualmente</h2>
+    <p class="hint">Escolha uma ferramenta pra marcar o que quer apagar (fica azul). Nada é apagado até você clicar em "excluir marcado".</p>
+
+    <div class="editor-toolbar">
+      <button class="tool-btn active" id="tool-wand" title="Varinha mágica: marca área de cor parecida ao clicar">🪄</button>
+      <button class="tool-btn" id="tool-lasso" title="Laço poligonal: clique os cantos da área, dê duplo-clique pra fechar">✂️</button>
+      <button class="tool-btn" id="tool-brush" title="Pincel seletor: arraste pra marcar à mão livre">🖌️</button>
+      <span class="tool-sep"></span>
+      <button class="btn-secondary" id="tool-invert" title="Inverter seleção">↔️ inverter</button>
+      <button class="btn-secondary" id="tool-clear-selection" title="Limpar seleção">✕ limpar seleção</button>
+    </div>
+
+    <div class="canvas-stack">
+      <canvas id="edit-canvas"></canvas>
+      <canvas id="selection-canvas"></canvas>
+    </div>
+
+    <div class="tolerance-row" id="tolerance-row">
+      <span>sensibilidade da varinha</span>
+      <input type="range" id="tolerance-slider" min="5" max="100" value="32" />
+    </div>
+    <div class="tolerance-row" id="brush-size-row" style="display:none;">
+      <span>tamanho do pincel</span>
+      <input type="range" id="brush-size-slider" min="4" max="60" value="18" />
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" id="editor-undo" title="Ctrl+Z">desfazer</button>
+      <button class="btn-secondary" id="editor-cancel">cancelar</button>
+      <button class="btn-primary" id="editor-delete-selected">excluir marcado</button>
+      <button class="btn-primary" id="editor-apply">aplicar e salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="lightbox-overlay">
+  <div class="modal-card lightbox-content">
+    <img id="lightbox-img" alt="" />
+    <div class="lightbox-actions">
+      <button class="btn-secondary" id="lightbox-download">⬇️ baixar</button>
+      <button class="btn-primary" id="lightbox-close">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="colorwheel-overlay">
+  <div class="modal-card">
+    <h2>Círculo cromático</h2>
+    <div class="colorwheel-wrap">
+      <div class="colorwheel" id="colorwheel"><div class="colorwheel-dot" id="colorwheel-dot"></div></div>
+      <div class="colorwheel-swatch" id="colorwheel-swatch"></div>
+    </div>
+    <div class="hex-display" id="colorwheel-hex">#000000</div>
+
+    <div class="usage-group">
+      <div class="usage-carousel">
+        <button class="usage-arrow" id="usage-prev" title="Exemplo anterior">‹</button>
+        <div class="usage-page">
+          <div class="usage-preview" id="usage-preview"></div>
+        </div>
+        <button class="usage-arrow" id="usage-next" title="Próximo exemplo">›</button>
+      </div>
+      <div class="usage-dots" id="usage-dots"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-primary" id="colorwheel-close">Fechar</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
