@@ -221,7 +221,7 @@
   }
   .session-card .title { font-size: 0.92rem; color: var(--ink); }
   .session-card .date { font-size: 0.76rem; color: var(--ink-soft); }
-  .session-delete {
+  .session-delete, .session-rename {
     flex: none;
     width: 28px; height: 28px;
     border-radius: 50%;
@@ -233,6 +233,7 @@
     display: flex; align-items: center; justify-content: center;
   }
   .session-delete:hover { color: var(--bad); border-color: var(--bad); }
+  .session-rename:hover { color: var(--accent-deep); border-color: var(--accent); }
 
   .home-empty { color: var(--ink-soft); font-size: 0.9rem; text-align: center; margin-top: 20px; }
 
@@ -441,6 +442,13 @@
   .btn-primary { border: none; background: var(--accent); color: var(--accent-ink); font-size: 0.85rem; padding: 8px 18px; border-radius: 999px; cursor: pointer; font-weight: 600; }
   .btn-primary:hover { background: var(--accent-deep); }
   .btn-primary:disabled { opacity: 0.6; cursor: default; }
+  .btn-danger { border: none; background: var(--bad); color: #fff; font-size: 0.85rem; padding: 8px 18px; border-radius: 999px; cursor: pointer; font-weight: 600; }
+  .btn-danger:hover { background: #A5301F; }
+
+  .confirm-card { width: min(340px, 100%); text-align: center; }
+  .confirm-card p { margin: 0; font-size: 0.92rem; color: var(--ink); line-height: 1.4; }
+  .confirm-card .field { text-align: left; }
+  .confirm-card .modal-actions { justify-content: center; }
 
   .hint { font-size: 0.76rem; color: var(--ink-soft); margin: 0; }
   .hint.warn { color: var(--bad); }
@@ -843,6 +851,29 @@
     <div class="lightbox-actions">
       <button class="btn-secondary" id="lightbox-download">⬇️ baixar</button>
       <button class="btn-primary" id="lightbox-close">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confirm-overlay">
+  <div class="modal-card confirm-card">
+    <p id="confirm-message"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="confirm-cancel">Cancelar</button>
+      <button class="btn-primary" id="confirm-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="rename-overlay">
+  <div class="modal-card confirm-card">
+    <div class="field">
+      <label>Novo nome da conversa</label>
+      <input type="text" id="rename-input" maxlength="60" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="rename-cancel">Cancelar</button>
+      <button class="btn-primary" id="rename-save">Salvar</button>
     </div>
   </div>
 </div>

@@ -42,6 +42,72 @@ const hueSlider = document.getElementById('hue-slider');
 const themeSwatch = document.getElementById('theme-swatch');
 const themeHexInput = document.getElementById('theme-hex');
 
+const confirmOverlay = document.getElementById('confirm-overlay');
+const confirmMessageEl = document.getElementById('confirm-message');
+const confirmCancelBtn = document.getElementById('confirm-cancel');
+const confirmOkBtn = document.getElementById('confirm-ok');
+let confirmResolve = null;
+
+function showConfirm(message, { okLabel = 'Confirmar', danger = false } = {}) {
+  confirmMessageEl.textContent = message;
+  confirmOkBtn.textContent = okLabel;
+  confirmOkBtn.classList.toggle('btn-danger', danger);
+  confirmOkBtn.classList.toggle('btn-primary', !danger);
+  confirmOverlay.classList.add('show');
+  return new Promise((resolve) => { confirmResolve = resolve; });
+}
+
+function resolveConfirm(result) {
+  confirmOverlay.classList.remove('show');
+  if (confirmResolve) {
+    confirmResolve(result);
+    confirmResolve = null;
+  }
+}
+
+confirmCancelBtn.addEventListener('click', () => resolveConfirm(false));
+confirmOkBtn.addEventListener('click', () => resolveConfirm(true));
+
+const renameOverlay = document.getElementById('rename-overlay');
+const renameInput = document.getElementById('rename-input');
+const renameCancelBtn = document.getElementById('rename-cancel');
+const renameSaveBtn = document.getElementById('rename-save');
+let renameTarget = null;
+
+function openRename(localId, title, onSaved) {
+  renameTarget = { localId, onSaved };
+  renameInput.value = title;
+  renameOverlay.classList.add('show');
+  renameInput.focus();
+  renameInput.select();
+}
+
+function closeRename() {
+  renameOverlay.classList.remove('show');
+  renameTarget = null;
+}
+
+async function saveRename() {
+  if (!renameTarget) return;
+  const { localId, onSaved } = renameTarget;
+  const title = renameInput.value.trim();
+  closeRename();
+  if (!title) return;
+  if (localId) await window.atelie.renameSession(localId, title);
+  if (onSaved) onSaved(title);
+}
+
+renameCancelBtn.addEventListener('click', closeRename);
+renameSaveBtn.addEventListener('click', saveRename);
+renameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    saveRename();
+  } else if (e.key === 'Escape') {
+    closeRename();
+  }
+});
+
 const questionsOverlay = document.getElementById('questions-overlay');
 const questionsFields = document.getElementById('questions-fields');
 const questionsCancelBtn = document.getElementById('questions-cancel');
@@ -143,6 +209,14 @@ function renderTabBar() {
     const title = document.createElement('span');
     title.className = 'tab-title';
     title.textContent = tab.title;
+    title.title = 'Clique duas vezes para renomear';
+    title.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      openRename(tab.localId, tab.title, (newTitle) => {
+        tab.title = truncateTitle(newTitle, 22);
+        renderTabBar();
+      });
+    });
     const close = document.createElement('span');
     close.className = 'tab-close';
     close.textContent = '✕';
@@ -582,13 +656,23 @@ async function refreshHome() {
     main.appendChild(date);
     main.addEventListener('click', () => openSession(s.localId, s.title));
 
+    const rename = document.createElement('button');
+    rename.className = 'session-rename';
+    rename.title = 'Renomear esta conversa';
+    rename.textContent = '✏️';
+    rename.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openRename(s.localId, s.title, () => refreshHome());
+    });
+
     const del = document.createElement('button');
     del.className = 'session-delete';
     del.title = 'Excluir esta conversa';
     del.textContent = '✕';
     del.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (!confirm(`Excluir a conversa "${s.title}"? Essa ação não pode ser desfeita.`)) return;
+      const ok = await showConfirm(`Excluir a conversa "${s.title}"? Essa ação não pode ser desfeita.`, { okLabel: 'Excluir', danger: true });
+      if (!ok) return;
       const openTab = findTabByLocalId(s.localId);
       if (openTab) closeTab(openTab.id);
       await window.atelie.deleteSession(s.localId);
@@ -596,6 +680,7 @@ async function refreshHome() {
     });
 
     card.appendChild(main);
+    card.appendChild(rename);
     card.appendChild(del);
     sessionListEl.appendChild(card);
   });

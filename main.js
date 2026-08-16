@@ -605,6 +605,13 @@ ipcMain.handle('sessions:delete', async (_event, { localId }) => {
   return { ok: true };
 });
 
+ipcMain.handle('sessions:rename', async (_event, { localId, title }) => {
+  const clean = (title || '').trim();
+  if (!clean) return { ok: false };
+  upsertSessionMeta(localId, { title: clean.length > 60 ? clean.slice(0, 60) + '…' : clean });
+  return { ok: true };
+});
+
 ipcMain.handle('history:getColors', async () => loadColorHistory());
 
 ipcMain.handle('history:getImages', async () => {

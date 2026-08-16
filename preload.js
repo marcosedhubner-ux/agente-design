@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('atelie', {
   listSessions: () => ipcRenderer.invoke('sessions:list'),
   openSession: (localId) => ipcRenderer.invoke('sessions:open', { localId }),
   deleteSession: (localId) => ipcRenderer.invoke('sessions:delete', { localId }),
+  renameSession: (localId, title) => ipcRenderer.invoke('sessions:rename', { localId, title }),
 
   getColorHistory: () => ipcRenderer.invoke('history:getColors'),
   getImageHistory: () => ipcRenderer.invoke('history:getImages'),
