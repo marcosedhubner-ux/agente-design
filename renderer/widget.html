@@ -89,6 +89,15 @@
 
   let dragging = false;
   let moved = 0;
+  let pendingDx = 0, pendingDy = 0, rafScheduled = false;
+
+  function flushDrag() {
+    rafScheduled = false;
+    if (!pendingDx && !pendingDy) return;
+    const dx = pendingDx, dy = pendingDy;
+    pendingDx = 0; pendingDy = 0;
+    window.widgetApi.dragBy(dx, dy);
+  }
 
   btn.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
@@ -100,7 +109,12 @@
     if (!dragging) return;
     if (e.movementX || e.movementY) {
       moved += Math.abs(e.movementX) + Math.abs(e.movementY);
-      window.widgetApi.dragBy(e.movementX, e.movementY);
+      pendingDx += e.movementX;
+      pendingDy += e.movementY;
+      if (!rafScheduled) {
+        rafScheduled = true;
+        requestAnimationFrame(flushDrag);
+      }
     }
   });
 

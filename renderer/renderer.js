@@ -9,6 +9,7 @@ const eyedropperBtn = document.getElementById('eyedropper-btn');
 const homeBtn = document.getElementById('home-btn');
 const homeNewChatBtn = document.getElementById('home-new-chat');
 const settingsBtn = document.getElementById('settings-btn');
+const historyBtn = document.getElementById('history-btn');
 
 const attachmentChip = document.getElementById('attachment-chip');
 const attachmentThumb = document.getElementById('attachment-thumb');
@@ -45,6 +46,11 @@ const questionsOverlay = document.getElementById('questions-overlay');
 const questionsFields = document.getElementById('questions-fields');
 const questionsCancelBtn = document.getElementById('questions-cancel');
 const questionsSendBtn = document.getElementById('questions-send');
+
+const lightboxOverlay = document.getElementById('lightbox-overlay');
+const lightboxImg = document.getElementById('lightbox-img');
+const lightboxDownload = document.getElementById('lightbox-download');
+const lightboxClose = document.getElementById('lightbox-close');
 
 const imageEditorOverlay = document.getElementById('image-editor-overlay');
 const editCanvas = document.getElementById('edit-canvas');
@@ -236,11 +242,12 @@ document.addEventListener('keydown', (e) => {
 });
 
 function extractQuestionsBlock(text) {
-  const m = text.match(/<!--QUESTIONS:(\[[\s\S]*?\])-->\s*$/);
+  const m = text.match(/<!--QUESTIONS:([\s\S]*?)-->\s*$/);
   if (!m) return { text, questions: null };
   try {
-    const questions = JSON.parse(m[1]);
-    if (!Array.isArray(questions) || questions.length === 0) return { text, questions: null };
+    const parsed = JSON.parse(m[1]);
+    const questions = Array.isArray(parsed) ? parsed : Array.isArray(parsed.questions) ? parsed.questions : null;
+    if (!questions || questions.length === 0) return { text, questions: null };
     return { text: text.slice(0, m.index).trim(), questions };
   } catch (e) {
     return { text, questions: null };
@@ -257,6 +264,8 @@ function addUserRow(tab, text, imagePreviewUrl) {
     const img = document.createElement('img');
     img.className = 'thumb';
     img.src = imagePreviewUrl;
+    img.title = 'Clique para ver em tamanho maior';
+    img.addEventListener('click', () => openLightbox(imagePreviewUrl));
     bubble.appendChild(img);
   }
   if (text) {
@@ -268,6 +277,31 @@ function addUserRow(tab, text, imagePreviewUrl) {
   tab.messagesEl.appendChild(row);
   scrollTabToBottom(tab);
 }
+
+let lightboxUrl = null;
+
+function imageNameFromPreviewUrl(url) {
+  try {
+    return decodeURIComponent(new URL(url).pathname.split('/').pop());
+  } catch (e) {
+    return null;
+  }
+}
+
+function openLightbox(url) {
+  lightboxUrl = url;
+  lightboxImg.src = url;
+  lightboxOverlay.classList.add('show');
+}
+
+lightboxClose.addEventListener('click', () => lightboxOverlay.classList.remove('show'));
+
+lightboxDownload.addEventListener('click', async () => {
+  if (!lightboxUrl) return;
+  const imageName = imageNameFromPreviewUrl(lightboxUrl);
+  if (!imageName) return;
+  await window.atelie.downloadImage(imageName);
+});
 
 function addAssistantTyping(tab) {
   const row = document.createElement('div');
@@ -531,8 +565,11 @@ async function refreshHome() {
   }
   homeEmptyEl.style.display = 'none';
   sessions.forEach((s) => {
-    const card = document.createElement('button');
+    const card = document.createElement('div');
     card.className = 'session-card';
+
+    const main = document.createElement('button');
+    main.className = 'session-card-main';
     const title = document.createElement('span');
     title.className = 'title';
     title.textContent = s.title;
@@ -541,9 +578,25 @@ async function refreshHome() {
     date.textContent = new Date(s.updatedAt).toLocaleString('pt-BR', {
       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
     });
-    card.appendChild(title);
-    card.appendChild(date);
-    card.addEventListener('click', () => openSession(s.localId, s.title));
+    main.appendChild(title);
+    main.appendChild(date);
+    main.addEventListener('click', () => openSession(s.localId, s.title));
+
+    const del = document.createElement('button');
+    del.className = 'session-delete';
+    del.title = 'Excluir esta conversa';
+    del.textContent = '✕';
+    del.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Excluir a conversa "${s.title}"? Essa ação não pode ser desfeita.`)) return;
+      const openTab = findTabByLocalId(s.localId);
+      if (openTab) closeTab(openTab.id);
+      await window.atelie.deleteSession(s.localId);
+      refreshHome();
+    });
+
+    card.appendChild(main);
+    card.appendChild(del);
     sessionListEl.appendChild(card);
   });
 }
@@ -576,6 +629,59 @@ homeBtn.addEventListener('click', async () => {
   showScreen('home-screen');
 });
 homeNewChatBtn.addEventListener('click', startNewChat);
+
+const historyOverlay = document.getElementById('history-overlay');
+const historyCloseBtn = document.getElementById('history-close');
+const historyColorsEl = document.getElementById('history-colors');
+const historyColorsEmptyEl = document.getElementById('history-colors-empty');
+const historyImagesEl = document.getElementById('history-images');
+const historyImagesEmptyEl = document.getElementById('history-images-empty');
+
+async function openHistory() {
+  const [colors, images] = await Promise.all([
+    window.atelie.getColorHistory(),
+    window.atelie.getImageHistory(),
+  ]);
+
+  historyColorsEl.innerHTML = '';
+  historyColorsEmptyEl.style.display = colors.length ? 'none' : 'block';
+  colors.forEach((c) => {
+    const btn = document.createElement('button');
+    btn.className = 'history-color-chip';
+    btn.title = 'Ver no círculo cromático';
+    const swatch = document.createElement('div');
+    swatch.className = 'swatch';
+    swatch.style.background = c.hex;
+    const hexEl = document.createElement('div');
+    hexEl.className = 'hex';
+    hexEl.textContent = c.hex.toUpperCase();
+    btn.appendChild(swatch);
+    btn.appendChild(hexEl);
+    btn.addEventListener('click', () => {
+      historyOverlay.classList.remove('show');
+      openColorWheel(c.hex);
+    });
+    historyColorsEl.appendChild(btn);
+  });
+
+  historyImagesEl.innerHTML = '';
+  historyImagesEmptyEl.style.display = images.length ? 'none' : 'block';
+  images.forEach((img) => {
+    const el = document.createElement('img');
+    el.src = img.previewUrl;
+    el.title = 'Clique para ver em tamanho maior';
+    el.addEventListener('click', () => {
+      historyOverlay.classList.remove('show');
+      openLightbox(img.previewUrl);
+    });
+    historyImagesEl.appendChild(el);
+  });
+
+  historyOverlay.classList.add('show');
+}
+
+historyBtn.addEventListener('click', openHistory);
+historyCloseBtn.addEventListener('click', () => historyOverlay.classList.remove('show'));
 
 function humanizeAccelerator(acc) {
   if (!acc) return '(nenhum)';
@@ -907,7 +1013,7 @@ function readableTextColor(hex) {
 function buildHarmonyPage(hex, comp, an1, an2, tri1, tri2) {
   const row = (hexList) => hexList.map((c) => `
     <button class="harmony-swatch" data-hex="${c}" title="Clique para ver esta cor no círculo cromático">
-      <div class="chip" style="background:${c}; color:${readableTextColor(c)};">Aa</div>
+      <div class="chip" style="background:${c}; color:${hex};">Aa</div>
       <div class="chip-hex">${c}</div>
     </button>`).join('');
 

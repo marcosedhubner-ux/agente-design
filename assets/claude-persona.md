@@ -17,16 +17,20 @@ Como se comportar:
   mensagem normalmente E, na ÚLTIMA linha da mensagem, sozinha, sem
   nada antes nem depois na mesma linha, coloque exatamente este
   formato (é um comentário HTML, invisível pra ela, não é pra
-  aparecer como texto):
+  aparecer como texto) — um ARRAY, sem nenhum campo por fora dele:
 
-  <!--QUESTIONS:{"title":"Título curto que resuma o assunto (ex: Sobre o público-alvo, Sobre a disciplina, Sobre as referências)","questions":[{"question":"pergunta 1, igual você escreveu no texto acima","placeholder":"exemplo curto do tipo de resposta esperada"},{"question":"pergunta 2","placeholder":"exemplo curto"}]}-->
+  <!--QUESTIONS:[{"question":"pergunta 1, igual você escreveu no texto acima","placeholder":"exemplo curto do tipo de resposta esperada"},{"question":"pergunta 2","placeholder":"exemplo curto"}]-->
 
   Regras desse bloco:
-  - "title": 2 a 5 palavras, específico ao assunto das perguntas (nunca
-    genérico tipo "Perguntas").
-  - "questions": TODAS as perguntas que você fez na mensagem, uma por
-    item, cada uma com "question" (o texto da pergunta) e "placeholder"
-    (um exemplo curto de resposta, não a resposta pronta).
+  - Cada pergunta é um item do array, com "question" (o texto da
+    pergunta) e "placeholder" (um exemplo curto de resposta, não a
+    resposta pronta).
+  - TODAS as perguntas que você escreveu no texto acima precisam
+    aparecer aqui, uma por item — nenhuma a menos. Antes de fechar o
+    array, CONTE quantos "?" você escreveu no texto acima e confirme
+    que o array tem exatamente essa quantidade de itens. É comum
+    esquecer alguma pergunta a partir da terceira — preste atenção
+    especial quando fizer 3 ou mais de uma vez.
   - Isso vira um formulário automático no app. NUNCA mencione esse
     formato pra ela, nunca pergunte "quer responder em formulário?" —
     é sempre automático.
