@@ -284,6 +284,8 @@
     cursor: pointer;
   }
   .suggestion:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .suggestion { display: flex; align-items: center; gap: 8px; }
+  .suggestion svg { flex: none; }
 
   .row { display: flex; gap: 8px; align-items: flex-end; }
   .row.user { justify-content: flex-end; }
@@ -330,6 +332,7 @@
   }
 
   .thumb { max-width: 220px; max-height: 160px; border-radius: 14px; display: block; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.4); cursor: pointer; }
+  .generated-caption { font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 6px; }
 
   .typing { display: inline-flex; gap: 4px; align-items: center; padding: 2px 0; }
   .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-soft); animation: bounce 1.2s infinite ease-in-out; }
@@ -357,6 +360,9 @@
   .attachment-chip .chip-status { font-size: 0.74rem; color: var(--ink-soft); }
   .chip-btn-row { display: flex; gap: 4px; }
   .chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     border: 1px solid var(--line);
     background: var(--card);
     color: var(--ink-soft);
@@ -375,9 +381,9 @@
 
   .input-row { display: flex; align-items: flex-end; gap: 8px; }
 
-  #attach-btn, #capture-btn, #eyedropper-btn { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--sky-50); color: var(--accent); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-  #attach-btn:hover, #capture-btn:hover, #eyedropper-btn:hover { border-color: var(--accent); }
-  #attach-btn:disabled, #capture-btn:disabled, #eyedropper-btn:disabled { opacity: 0.5; cursor: default; }
+  #attach-btn, #capture-btn, #eyedropper-btn, #generate-image-btn { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--sky-50); color: var(--accent); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+  #attach-btn:hover, #capture-btn:hover, #eyedropper-btn:hover, #generate-image-btn:hover { border-color: var(--accent); }
+  #attach-btn:disabled, #capture-btn:disabled, #eyedropper-btn:disabled, #generate-image-btn:disabled { opacity: 0.5; cursor: default; }
 
   #text-input { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 20px; padding: 10px 14px; font-family: inherit; font-size: 0.92rem; color: var(--ink); max-height: 120px; background: var(--sky-50); }
   #text-input:focus { outline: none; border-color: var(--accent); }
@@ -666,16 +672,37 @@
     <p class="sub">seu mentor de design</p>
   </div>
   <div class="spacer"></div>
-  <button class="icon-btn" id="home-btn" title="Suas conversas">🏠</button>
-  <button class="icon-btn" id="history-btn" title="Histórico de cores e imagens">🕘</button>
-  <button class="icon-btn" id="settings-btn" title="Configurações">⚙️</button>
+  <button class="icon-btn" id="home-btn" title="Suas conversas">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M4 11.5 12 5l8 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M6 10.4V19h4v-4.6h4V19h4v-8.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+  <button class="icon-btn" id="history-btn" title="Histórico de cores e imagens">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="12" cy="12.5" r="7.3" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M12 8.4v4.4l2.8 1.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8.3 3.6 5.6 5.4M15.7 3.6l2.7 1.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.6"/>
+    </svg>
+  </button>
+  <button class="icon-btn" id="settings-btn" title="Configurações">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M12 3.5V6M12 18V20.5M20.5 12H18M6 12H3.5M17.5 6.5 15.8 8.2M8.2 15.8 6.5 17.5M17.5 17.5 15.8 15.8M8.2 8.2 6.5 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+  </button>
 </header>
 
 <div class="tab-bar" id="tab-bar"></div>
 
 <div class="screen" id="home-screen">
   <h2 class="home-title">Suas conversas</h2>
-  <button class="new-chat-card" id="home-new-chat">➕ Nova conversa</button>
+  <button class="new-chat-card" id="home-new-chat">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>
+    Nova conversa
+  </button>
   <div class="session-list" id="session-list"></div>
   <p class="home-empty" id="home-empty" style="display:none;">Ainda não tem nenhuma conversa. Clique em "Nova conversa" pra começar!</p>
 </div>
@@ -702,9 +729,30 @@
       <h2>Oi! Sobre o que vamos conversar?</h2>
       <p>Pode pedir ideias, mandar um print pra eu opinar, ou só tirar uma dúvida.</p>
       <div class="suggestions">
-        <button class="suggestion" data-text="Me dê ideias para um projeto novo">💡 Me dê ideias para um projeto novo</button>
-        <button class="suggestion" data-text="O que é hierarquia visual?">❓ O que é hierarquia visual?</button>
-        <button class="suggestion" data-text="Essas cores combinam entre si?">🎨 Essas cores combinam entre si?</button>
+        <button class="suggestion" data-text="Me dê ideias para um projeto novo">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M9 18h6M10 21h4M12 3.2c-3.3 0-5.6 2.4-5.6 5.4 0 1.9.9 3.1 1.9 4.2.7.7 1.1 1.3 1.2 2h5c.1-.7.5-1.3 1.2-2 1-1.1 1.9-2.3 1.9-4.2 0-3-2.3-5.4-5.6-5.4Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 1.3v1M4.6 8.5h-1M20.4 8.5h-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.55"/>
+          </svg>
+          Me dê ideias para um projeto novo
+        </button>
+        <button class="suggestion" data-text="O que é hierarquia visual?">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.2" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M9.3 9.6c0-1.6 1.2-2.7 2.7-2.7s2.6 1 2.6 2.3c0 1.8-2.3 1.9-2.4 3.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12.1" cy="16.3" r="0.9" fill="currentColor"/>
+          </svg>
+          O que é hierarquia visual?
+        </button>
+        <button class="suggestion" data-text="Essas cores combinam entre si?">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 3.5C7 3.5 3 7.2 3 11.8c0 3.2 2.3 4.4 4 4.4.7 0 1.1-.4 1.1-1 0-.5-.3-.8-.5-1.1-.2-.3-.4-.6-.4-1 0-.8.7-1.4 1.5-1.4h5.5c2.8 0 5.1-2.1 5.1-4.4 0-2.3-3.2-3.8-7.3-3.8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            <circle cx="7.8" cy="8.6" r="1" fill="var(--whisker)"/>
+            <circle cx="11.6" cy="6.7" r="1" fill="var(--accent)"/>
+            <circle cx="15.6" cy="7.7" r="1" fill="var(--blush)"/>
+          </svg>
+          Essas cores combinam entre si?
+        </button>
       </div>
     </div>
   </template>
@@ -715,18 +763,38 @@
       <div class="chip-tools">
         <span class="chip-status" id="attachment-status">imagem anexada</span>
         <div class="chip-btn-row">
-          <button class="chip-btn" id="tool-remove-bg" title="Remover fundo automaticamente">🪄 fundo</button>
-          <button class="chip-btn" id="tool-remove-bg-manual" title="Remover fundo manualmente">🖌️ manual</button>
-          <button class="chip-btn" id="tool-enhance" title="Melhorar qualidade">✨ melhorar</button>
+          <button class="chip-btn" id="tool-remove-bg" title="Remover fundo automaticamente">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19 17 7M14 4l1.5 1.5M17.5 7.5 19 9M3 21l2.5-1M19 4l1 1M4 20l1 1"/></svg>
+            fundo
+          </button>
+          <button class="chip-btn" id="tool-remove-bg-manual" title="Remover fundo manualmente">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 15 15.5 8.5a2 2 0 1 1 2.5 2.5L11 17c-1 1-2.5 1.3-4 1 .3-1.5.6-3 2-4Z"/></svg>
+            manual
+          </button>
+          <button class="chip-btn" id="tool-enhance" title="Melhorar qualidade">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 2l1.6 4.9L18.5 8.5l-4.9 1.6L12 15l-1.6-4.9L5.5 8.5l4.9-1.6L12 2zM19 15l.9 2.7 2.7.9-2.7.9L19 22l-.9-2.5-2.6-.9 2.6-.9L19 15z"/></svg>
+            melhorar
+          </button>
         </div>
       </div>
       <button class="attachment-remove" id="attachment-remove" title="Remover imagem">✕</button>
     </div>
     <div class="input-row">
-      <button id="attach-btn" title="Anexar imagem do computador">📎</button>
-      <button id="capture-btn" title="Tirar print da tela">📷</button>
+      <button id="attach-btn" title="Anexar imagem do computador">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 8.5 9.9 16.1a3 3 0 0 1-4.24-4.24l7.6-7.6a2 2 0 0 1 2.83 2.83l-7.13 7.13a1 1 0 0 1-1.41-1.41l6.36-6.36"/></svg>
+      </button>
+      <button id="capture-btn" title="Tirar print da tela">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1-1.5h6L16 7h2.5A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.2"/></svg>
+      </button>
       <button id="eyedropper-btn" title="Conta-gotas: descobrir a cor de qualquer ponto da tela">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M20.71 5.63l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-3.12 3.12-1.93-1.91-1.41 1.41 1.42 1.42L3 16.25V21h4.75l8.92-8.92 1.42 1.42 1.41-1.41-1.92-1.92 3.12-3.12c.4-.4.4-1.03.01-1.42zM6.92 19H5v-1.92l9.06-9.06 1.92 1.92L6.92 19z"/></svg>
+      </button>
+      <button id="generate-image-btn" title="Gerar uma imagem com IA">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="3.5" y="4.5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="1.6"/>
+          <circle cx="8.4" cy="9.4" r="1.5" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M4.5 16.3 9.2 11.9c.6-.6 1.5-.6 2.1 0l4.2 4M13.9 14.4l1.4-1.3c.6-.6 1.5-.6 2.1 0l2.1 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </button>
       <textarea id="text-input" rows="1" placeholder="Escreva sua mensagem..."></textarea>
       <button id="send-btn" title="Enviar">➤</button>
@@ -874,6 +942,20 @@
     <div class="modal-actions">
       <button class="btn-secondary" id="rename-cancel">Cancelar</button>
       <button class="btn-primary" id="rename-save">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="generate-image-overlay">
+  <div class="modal-card confirm-card">
+    <h2>Gerar imagem</h2>
+    <div class="field">
+      <label>Descreva a imagem que você quer (pode ser foto realista, ilustração, mockup, etc)</label>
+      <textarea id="generate-image-input" rows="3" placeholder="ex: foto realista de uma sala de estar minimalista, tons de azul, luz natural"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="generate-image-cancel">Cancelar</button>
+      <button class="btn-primary" id="generate-image-send">Gerar</button>
     </div>
   </div>
 </div>

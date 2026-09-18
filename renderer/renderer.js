@@ -6,6 +6,7 @@ const sendBtn = document.getElementById('send-btn');
 const attachBtn = document.getElementById('attach-btn');
 const captureBtn = document.getElementById('capture-btn');
 const eyedropperBtn = document.getElementById('eyedropper-btn');
+const generateImageBtn = document.getElementById('generate-image-btn');
 const homeBtn = document.getElementById('home-btn');
 const homeNewChatBtn = document.getElementById('home-new-chat');
 const settingsBtn = document.getElementById('settings-btn');
@@ -382,7 +383,15 @@ function addAssistantTyping(tab) {
   row.className = 'row assistant typing-row';
   const avatar = document.createElement('div');
   avatar.className = 'avatar';
-  avatar.textContent = '🐱';
+  avatar.style.color = 'var(--accent)';
+  avatar.innerHTML = '<svg width="15" height="13" viewBox="0 0 120 96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+    + '<path d="M30 30 L20 10 L42 24" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>'
+    + '<path d="M90 30 L100 10 L78 24" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>'
+    + '<ellipse cx="60" cy="52" rx="34" ry="28" stroke="currentColor" stroke-width="5"/>'
+    + '<circle cx="49" cy="48" r="3.4" fill="currentColor"/>'
+    + '<circle cx="71" cy="48" r="3.4" fill="currentColor"/>'
+    + '<path d="M60 61 Q60 66 54 66" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>'
+    + '</svg>';
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   bubble.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
@@ -412,7 +421,7 @@ function renderMessageText(container, text) {
   }
 }
 
-function addAssistantRow(tab, rawText, isError) {
+function addAssistantRow(tab, rawText, isError, generatedImage) {
   hideEmptyState(tab);
   const { text, questions } = isError ? { text: rawText, questions: null } : extractQuestionsBlock(rawText);
 
@@ -420,10 +429,32 @@ function addAssistantRow(tab, rawText, isError) {
   row.className = 'row assistant';
   const avatar = document.createElement('div');
   avatar.className = 'avatar';
-  avatar.textContent = '🐱';
+  avatar.style.color = 'var(--accent)';
+  avatar.innerHTML = '<svg width="15" height="13" viewBox="0 0 120 96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+    + '<path d="M30 30 L20 10 L42 24" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>'
+    + '<path d="M90 30 L100 10 L78 24" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>'
+    + '<ellipse cx="60" cy="52" rx="34" ry="28" stroke="currentColor" stroke-width="5"/>'
+    + '<circle cx="49" cy="48" r="3.4" fill="currentColor"/>'
+    + '<circle cx="71" cy="48" r="3.4" fill="currentColor"/>'
+    + '<path d="M60 61 Q60 66 54 66" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>'
+    + '</svg>';
   const bubble = document.createElement('div');
   bubble.className = 'bubble' + (isError ? ' error' : '');
-  renderMessageText(bubble, text);
+  if (generatedImage) {
+    const img = document.createElement('img');
+    img.className = 'thumb';
+    img.src = generatedImage.previewUrl;
+    img.title = 'Clique para ver em tamanho maior';
+    img.addEventListener('click', () => openLightbox(generatedImage.previewUrl));
+    bubble.appendChild(img);
+    if (generatedImage.caption) {
+      const cap = document.createElement('div');
+      cap.className = 'generated-caption';
+      cap.textContent = generatedImage.caption;
+      bubble.appendChild(cap);
+    }
+  }
+  if (text) renderMessageText(bubble, text);
   row.appendChild(avatar);
   row.appendChild(bubble);
 
@@ -448,7 +479,7 @@ async function doSend(tab, text, imageMeta) {
     const res = await window.atelie.sendMessage(tab.localId, text, imageName);
     tab.localId = res.localId || tab.localId;
     removeTypingRow(tab);
-    addAssistantRow(tab, res.text, !res.ok);
+    addAssistantRow(tab, res.text, !res.ok, res.generatedImage);
     if (tab.title === 'Nova conversa' && text) {
       tab.title = truncateTitle(text, 22);
       renderTabBar();
@@ -521,7 +552,7 @@ attachBtn.addEventListener('click', async () => {
   if (!tab) return;
   const result = await window.atelie.pickImage();
   if (!result) return;
-  setPendingImage(tab, result, '🖼️ imagem anexada');
+  setPendingImage(tab, result, 'imagem anexada');
 });
 
 toolRemoveBgBtn.addEventListener('click', async () => {
@@ -532,7 +563,7 @@ toolRemoveBgBtn.addEventListener('click', async () => {
   const res = await window.atelie.removeBackground(tab.pendingImage.name);
   setToolsDisabled(false);
   if (res.ok) {
-    setPendingImage(tab, { name: res.name, previewUrl: res.previewUrl }, '🪄 fundo removido ✓');
+    setPendingImage(tab, { name: res.name, previewUrl: res.previewUrl }, 'fundo removido ✓');
   } else {
     attachmentStatus.textContent = res.error || 'não consegui remover o fundo';
   }
@@ -546,7 +577,7 @@ toolEnhanceBtn.addEventListener('click', async () => {
   const res = await window.atelie.enhanceImage(tab.pendingImage.name);
   setToolsDisabled(false);
   if (res.ok) {
-    setPendingImage(tab, { name: res.name, previewUrl: res.previewUrl }, '✨ qualidade melhorada ✓');
+    setPendingImage(tab, { name: res.name, previewUrl: res.previewUrl }, 'qualidade melhorada ✓');
   } else {
     attachmentStatus.textContent = res.error || 'não consegui melhorar essa imagem';
   }
@@ -572,7 +603,7 @@ document.addEventListener('paste', async (e) => {
       const buf = new Uint8Array(await file.arrayBuffer());
       const ext = '.' + (item.type.split('/')[1] || 'png');
       const result = await window.atelie.saveClipboardImage(buf, ext);
-      if (result) setPendingImage(tab, result, '📋 imagem colada');
+      if (result) setPendingImage(tab, result, 'imagem colada');
       break;
     }
   }
@@ -618,7 +649,7 @@ captureBtn.addEventListener('click', async () => {
     addAssistantRow(tab, 'Não consegui tirar o print da tela. Pode tentar de novo?', true);
     return;
   }
-  setPendingImage(tab, result, '📷 print da tela anexado');
+  setPendingImage(tab, result, 'print da tela anexado');
   textInput.focus();
 });
 
@@ -627,7 +658,7 @@ window.atelie.onHotkeyCapture((result) => {
   const tab = activeTab();
   if (!tab) return;
   showScreen('chat-screen');
-  setPendingImage(tab, result, '📷 print da tela anexado');
+  setPendingImage(tab, result, 'print da tela anexado');
 });
 
 async function refreshHome() {
@@ -698,7 +729,7 @@ async function openSession(localId, title) {
     transcript.forEach((m) => {
       if (m.role === 'user' && m.kind === 'color') addColorCard(tab, m.hex);
       else if (m.role === 'user') addUserRow(tab, m.text, m.imagePreviewUrl);
-      else addAssistantRow(tab, m.text, m.error);
+      else addAssistantRow(tab, m.text, m.error, m.generatedImage);
     });
   }
   switchToTab(tab.id);
@@ -1043,7 +1074,7 @@ function addColorCard(tab, hex) {
   const wheelBtn = document.createElement('button');
   wheelBtn.className = 'wheel-btn';
   wheelBtn.title = 'Ver no círculo cromático e cores que combinam';
-  wheelBtn.textContent = '🎨';
+  wheelBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="7.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="14.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="8" cy="14.5" r="1.3" fill="currentColor" stroke="none"/></svg>';
   wheelBtn.addEventListener('click', () => openColorWheel(hex));
   card.appendChild(swatch);
   card.appendChild(info);
@@ -1055,6 +1086,34 @@ function addColorCard(tab, hex) {
 }
 
 eyedropperBtn.addEventListener('click', () => window.atelie.openEyedropper());
+
+const generateImageOverlay = document.getElementById('generate-image-overlay');
+const generateImageInput = document.getElementById('generate-image-input');
+const generateImageCancelBtn = document.getElementById('generate-image-cancel');
+const generateImageSendBtn = document.getElementById('generate-image-send');
+
+generateImageBtn.addEventListener('click', () => {
+  generateImageInput.value = '';
+  generateImageOverlay.classList.add('show');
+  generateImageInput.focus();
+});
+
+generateImageCancelBtn.addEventListener('click', () => {
+  generateImageOverlay.classList.remove('show');
+});
+
+generateImageSendBtn.addEventListener('click', async () => {
+  const description = generateImageInput.value.trim();
+  if (!description) return;
+  generateImageOverlay.classList.remove('show');
+  const tab = activeTab();
+  if (!tab) return;
+  await doSend(tab, `Gerar imagem: ${description}`, null);
+});
+
+generateImageInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') generateImageOverlay.classList.remove('show');
+});
 
 window.atelie.onEyedropperResult(async (hex) => {
   const tab = activeTab();
@@ -1604,7 +1663,7 @@ document.getElementById('editor-apply').addEventListener('click', async () => {
   attachmentStatus.textContent = 'salvando edição...';
   const res = await window.atelie.removeBackgroundManual(dataUrl);
   if (res.ok) {
-    setPendingImage(tab, { name: res.name, previewUrl: res.previewUrl }, '🖌️ fundo removido (manual) ✓');
+    setPendingImage(tab, { name: res.name, previewUrl: res.previewUrl }, 'fundo removido (manual) ✓');
   } else {
     attachmentStatus.textContent = res.error || 'não consegui salvar';
   }

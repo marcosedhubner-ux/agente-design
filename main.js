@@ -1,7 +1,7 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const { app, BrowserWindow, ipcMain, dialog, desktopCapturer, screen, globalShortcut, Tray, Menu } = require('electron');
-const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
@@ -9,6 +9,8 @@ const { pathToFileURL } = require('url');
 const sharp = require('sharp');
 
 const CLAUDE_CLI_COMMAND = process.env.CLAUDE_CLI_COMMAND || 'claude';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
 
 const userDataDir = app.getPath('userData');
 const workdir = path.join(userDataDir, 'workdir');
@@ -505,6 +507,69 @@ function runClaude(promptText, claudeSessionId) {
   });
 }
 
+function extractImageBlock(text) {
+  const m = text.match(/<!--IMAGE:([\s\S]*?)-->\s*$/);
+  if (!m) return { text, imagePrompt: null, caption: null };
+  try {
+    const parsed = JSON.parse(m[1]);
+    if (!parsed.prompt) return { text, imagePrompt: null, caption: null };
+    return { text: text.slice(0, m.index).trim(), imagePrompt: parsed.prompt, caption: parsed.caption || null };
+  } catch (e) {
+    return { text, imagePrompt: null, caption: null };
+  }
+}
+
+async function generateWithGemini(prompt) {
+  if (!GEMINI_API_KEY) return null;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const parts = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
+    const imagePart = parts.find((p) => p.inlineData && p.inlineData.data);
+    if (!imagePart) return null;
+    return Buffer.from(imagePart.inlineData.data, 'base64');
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function generateWithPollinations(prompt) {
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=flux&width=1024&height=1024&nologo=true`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) return { ok: false, error: 'O gerador de imagens não respondeu direito. Pode tentar de novo?' };
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const saved = await saveBufferAsUpload(buffer, '.png', 'gerada');
+    return { ok: true, ...saved };
+  } catch (e) {
+    return { ok: false, error: 'Não consegui gerar a imagem agora (sem internet, ou o serviço está fora do ar). Pode tentar de novo?' };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function generateImageFromPrompt(prompt) {
+  const geminiBuffer = await generateWithGemini(prompt);
+  if (geminiBuffer) {
+    const saved = await saveBufferAsUpload(geminiBuffer, '.png', 'gerada');
+    return { ok: true, ...saved };
+  }
+  return generateWithPollinations(prompt);
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -571,10 +636,25 @@ ipcMain.handle('chat:send', async (_event, { localId, text, imageName }) => {
 
   const res = await runClaude(promptText, claudeSessionId);
 
-  appendToTranscript(id, { role: 'assistant', text: res.text, error: !res.ok, ts: Date.now() });
+  let replyText = res.text;
+  let generatedImage = null;
+  if (res.ok) {
+    const extracted = extractImageBlock(res.text);
+    replyText = extracted.text;
+    if (extracted.imagePrompt) {
+      const imgRes = await generateImageFromPrompt(extracted.imagePrompt);
+      if (imgRes.ok) {
+        generatedImage = { name: imgRes.name, previewUrl: imgRes.previewUrl, caption: extracted.caption };
+      } else {
+        replyText = replyText ? `${replyText}\n\n(${imgRes.error})` : imgRes.error;
+      }
+    }
+  }
+
+  appendToTranscript(id, { role: 'assistant', text: replyText, error: !res.ok, generatedImage, ts: Date.now() });
   upsertSessionMeta(id, { claudeSessionId: res.sessionId || claudeSessionId });
 
-  return { ok: res.ok, text: res.text, localId: id };
+  return { ok: res.ok, text: replyText, generatedImage, localId: id };
 });
 
 ipcMain.handle('chat:saveColor', async (_event, { localId, hex }) => {
